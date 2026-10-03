@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Secrets — never commit real credentials
+.env
+
+# Generated runtime artefacts
+logs/*.log
+logs/*.jsonl
+data/vector_index/
+
+# Batch validation runs are generated locally by scripts/run_validation.py.
+# Keep the folder, not the individual run files.
+data/validation_results/*.json
+!data/validation_results/.gitkeep
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

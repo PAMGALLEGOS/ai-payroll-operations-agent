@@ -1,0 +1,12 @@
+[project]
+name = "ai-payroll-agent"
+version = "0.1.0"
+description = "Academic PoC — AI Payroll Operations & Validation Agent (synthetic data only)"
+requires-python = ">=3.11,<3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "eval: evaluation cases that call the real LLM (not used in CP1)",
+]

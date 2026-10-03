@@ -1,0 +1,31 @@
+employee_id,scenario,description,expected_gross_pay,expected_total_deductions,expected_net_pay
+EMP001,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP002,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP003,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP004,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP005,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP006,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP007,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP008,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP009,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP010,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP011,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP012,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP013,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP014,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP015,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP016,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP017,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP018,CLEAN_PASS,Provider values equal expected values,PASS,PASS,PASS
+EMP019,INSIDE_TOLERANCE_POSITIVE,"Provider gross (and net) slightly above expected, inside tolerance",PASS,PASS,PASS
+EMP020,INSIDE_TOLERANCE_NEGATIVE,"Provider deductions slightly below expected, inside tolerance",PASS,PASS,PASS
+EMP021,AT_TOLERANCE_GROSS,Provider gross differs by exactly the gross tolerance (boundary = PASS),PASS,PASS,PASS
+EMP022,AT_TOLERANCE_NET_NEGATIVE,Provider net differs by exactly minus the net tolerance (boundary = PASS),PASS,PASS,PASS
+EMP023,JUST_ABOVE_TOLERANCE_GROSS,Provider gross exceeds tolerance by one cent; net still inside its tolerance,FAIL:OUT_OF_TOLERANCE,PASS,PASS
+EMP024,NET_OUT_OF_TOLERANCE,Provider net pay 350.00 above expected (overpayment),PASS,PASS,FAIL:OUT_OF_TOLERANCE
+EMP025,DEDUCTIONS_UNDERSTATED,"Provider deductions 120.00 below expected, so net is 120.00 above",PASS,FAIL:OUT_OF_TOLERANCE,FAIL:OUT_OF_TOLERANCE
+EMP026,GROSS_UNDERPAID,"Provider gross 250.00 below expected (negative difference), net follows",FAIL:OUT_OF_TOLERANCE,PASS,FAIL:OUT_OF_TOLERANCE
+EMP027,MISSING_RAW_INPUT,"overtime_pay is blank: gross cannot be calculated, net inherits the issue",FAIL:MISSING_INPUT,PASS,FAIL:MISSING_INPUT
+EMP028,MISSING_PROVIDER_VALUE,Provider did not report net pay,PASS,PASS,FAIL:MISSING_INPUT
+EMP029,INVALID_RAW_INPUT,"deduction_benefits is negative: deductions invalid, net inherits the issue",PASS,FAIL:INVALID_INPUT,FAIL:INVALID_INPUT
+EMP030,NO_PROVIDER_RECORD,Employee exists in inputs but the provider file has no record,FAIL:MISSING_INPUT,FAIL:MISSING_INPUT,FAIL:MISSING_INPUT

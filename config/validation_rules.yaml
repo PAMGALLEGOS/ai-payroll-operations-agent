@@ -1,0 +1,59 @@
+# =============================================================================
+# Payroll Validation Rules — SINGLE SOURCE OF TRUTH (decision D16)
+# =============================================================================
+# The Validation Engine reads every formula, field mapping and tolerance from
+# this file. Nothing in this file is executed as code: calculations are declared
+# with a small set of supported operations ("sum", "subtract") that the Engine
+# implements explicitly.
+#
+# Any change here must bump `rules_version`, because every persisted validation
+# result records the rules_version that produced it.
+#
+# SYNTHETIC RULES FOR AN ACADEMIC PoC. They do not represent the payroll
+# legislation of any real country.
+# =============================================================================
+
+rules_version: "1.0.0"
+
+country: SYNTHETIC
+currency: SYN
+period_format: "YYYY-MM"
+
+money:
+  # Monetary inputs must have at most this many decimal places.
+  decimal_places: 2
+  # Monetary inputs and provider values must be >= 0 (otherwise INVALID_INPUT).
+  allow_negative_inputs: false
+
+# Decision D5 — documented here so the Engine can refuse unsupported variants.
+tolerance_rule:
+  type: absolute                        # same currency units as the values
+  difference: actual_minus_expected     # difference = actual_value - expected_value
+  pass_condition: abs_difference_lte_tolerance   # abs(difference) <= tolerance -> PASS
+
+# Validations run in this order. A calculation may reference the expected value
+# of a validation declared ABOVE it (net_pay uses gross_pay and total_deductions).
+validations:
+  - validation_type: gross_pay
+    description: Gross pay calculated from base salary plus overtime.
+    formula: "gross_pay = base_salary + overtime_pay"
+    calculation: sum
+    inputs: [base_salary, overtime_pay]
+    provider_field: provider_gross_pay
+    tolerance: "5.00"
+
+  - validation_type: total_deductions
+    description: Sum of all employee deductions.
+    formula: "total_deductions = deduction_tax + deduction_social_security + deduction_benefits"
+    calculation: sum
+    inputs: [deduction_tax, deduction_social_security, deduction_benefits]
+    provider_field: provider_total_deductions
+    tolerance: "5.00"
+
+  - validation_type: net_pay
+    description: Net pay calculated as gross pay minus total deductions.
+    formula: "net_pay = gross_pay - total_deductions"
+    calculation: subtract
+    inputs: [gross_pay, total_deductions]
+    provider_field: provider_net_pay
+    tolerance: "10.00"
