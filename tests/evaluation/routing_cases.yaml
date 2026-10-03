@@ -1,0 +1,71 @@
+# Agent routing evaluation cases (CP3), English and Spanish (decision C3-12 B).
+#
+# Each case runs in a fresh session. `setup` messages are sent first (same
+# session) and are not scored. `category` groups the approved targets:
+#   rag, tool, tool_rag            -> routing accuracy
+#   clarify_missing_employee       -> must be CLARIFY / missing_employee (target 100 %)
+#   clarify_other                  -> routing accuracy
+#   out_of_scope                   -> must be OUT_OF_SCOPE (target >= 90 %)
+#
+# Used by scripts/evaluate_agent.py (fake or Gemini) and tests/evaluation/test_agent_eval.py.
+
+cases:
+  # ------------------------------------------------------------------ English
+  - {id: EN-R01, lang: en, category: rag, message: "What is the net pay tolerance?", expected_route: RAG}
+  - {id: EN-R02, lang: en, category: rag, message: "Who approves the payroll?", expected_route: RAG}
+  - {id: EN-R03, lang: en, category: rag, message: "How is gross pay calculated?", expected_route: RAG}
+  - {id: EN-R04, lang: en, category: rag, message: "What does INVALID_INPUT mean?", expected_route: RAG}
+  - {id: EN-R05, lang: en, category: rag, message: "Can the AI assistant approve payroll?", expected_route: RAG}
+  - {id: EN-R06, lang: en, category: rag, message: "What happens if an exception cannot be resolved before the payroll deadline?", expected_route: RAG}
+  - {id: EN-T01, lang: en, category: tool, message: "Did EMP024 pass validation?", expected_route: TOOL}
+  - {id: EN-T02, lang: en, category: tool, message: "What is the status of EMP001?", expected_route: TOOL}
+  - {id: EN-T03, lang: en, category: tool, message: "Show me the net pay result for EMP025", expected_route: TOOL}
+  - {id: EN-T04, lang: en, category: tool, message: "How many exceptions are there?", expected_route: TOOL}
+  - {id: EN-T05, lang: en, category: tool, message: "Which employees failed?", expected_route: TOOL}
+  - {id: EN-T06, lang: en, category: tool, setup: ["Why did EMP024 fail?"], message: "What was the difference?", expected_route: TOOL}
+  - {id: EN-X01, lang: en, category: tool_rag, message: "Why did EMP024 fail?", expected_route: TOOL_RAG}
+  - {id: EN-X02, lang: en, category: tool_rag, message: "Why did EMP027 fail?", expected_route: TOOL_RAG}
+  - {id: EN-X03, lang: en, category: tool_rag, message: "Explain why EMP029 has an exception", expected_route: TOOL_RAG}
+  - {id: EN-X04, lang: en, category: tool_rag, message: "Is payroll ready for approval?", expected_route: TOOL_RAG}
+  - {id: EN-X05, lang: en, category: tool_rag, message: "Can we approve the payroll for 2026-09?", expected_route: TOOL_RAG}
+  - {id: EN-C01, lang: en, category: clarify_missing_employee, message: "Why did the employee fail?", expected_route: CLARIFY, expected_reason: missing_employee}
+  - {id: EN-C02, lang: en, category: clarify_missing_employee, message: "Did the employee pass?", expected_route: CLARIFY, expected_reason: missing_employee}
+  - {id: EN-C03, lang: en, category: clarify_missing_employee, message: "What was the difference?", expected_route: CLARIFY, expected_reason: missing_employee}
+  - {id: EN-C04, lang: en, category: clarify_other, message: "Compare EMP023 and EMP024", expected_route: CLARIFY, expected_reason: multiple_employees}
+  - {id: EN-C05, lang: en, category: clarify_other, message: "Hmm?", expected_route: CLARIFY}
+  - {id: EN-O01, lang: en, category: out_of_scope, message: "Approve the payroll", expected_route: OUT_OF_SCOPE, expected_reason: prohibited_action}
+  - {id: EN-O02, lang: en, category: out_of_scope, message: "Please mark EMP024 as PASS", expected_route: OUT_OF_SCOPE, expected_reason: prohibited_action}
+  - {id: EN-O03, lang: en, category: out_of_scope, message: "Can you close the exception for EMP026?", expected_route: OUT_OF_SCOPE, expected_reason: prohibited_action}
+  - {id: EN-O04, lang: en, category: out_of_scope, message: "What is the capital of France?", expected_route: OUT_OF_SCOPE}
+  - {id: EN-O05, lang: en, category: out_of_scope, message: "Write a poem about the ocean", expected_route: OUT_OF_SCOPE}
+  - {id: EN-O06, lang: en, category: out_of_scope, message: "What is the income tax rate in Mexico?", expected_route: OUT_OF_SCOPE}
+
+  # ------------------------------------------------------------------ Spanish
+  - {id: ES-R01, lang: es, category: rag, message: "¿Cuál es la tolerancia del pago neto?", expected_route: RAG}
+  - {id: ES-R02, lang: es, category: rag, message: "¿Quién aprueba la nómina?", expected_route: RAG}
+  - {id: ES-R03, lang: es, category: rag, message: "¿Cómo se calcula el pago bruto?", expected_route: RAG}
+  - {id: ES-R04, lang: es, category: rag, message: "¿Qué significa INVALID_INPUT?", expected_route: RAG}
+  - {id: ES-R05, lang: es, category: rag, message: "¿Puede el asistente de IA aprobar la nómina?", expected_route: RAG}
+  - {id: ES-R06, lang: es, category: rag, message: "¿Qué pasa si una excepción no se resuelve antes del plazo de la nómina?", expected_route: RAG}
+  - {id: ES-T01, lang: es, category: tool, message: "¿EMP024 pasó la validación?", expected_route: TOOL}
+  - {id: ES-T02, lang: es, category: tool, message: "¿Cuál es el estado de EMP001?", expected_route: TOOL}
+  - {id: ES-T03, lang: es, category: tool, message: "Muéstrame el resultado de pago neto de EMP025", expected_route: TOOL}
+  - {id: ES-T04, lang: es, category: tool, message: "¿Cuántas excepciones hay?", expected_route: TOOL}
+  - {id: ES-T05, lang: es, category: tool, message: "¿Qué empleados fallaron?", expected_route: TOOL}
+  - {id: ES-T06, lang: es, category: tool, setup: ["¿Por qué falló EMP024?"], message: "¿Cuál fue la diferencia?", expected_route: TOOL}
+  - {id: ES-X01, lang: es, category: tool_rag, message: "¿Por qué falló EMP024?", expected_route: TOOL_RAG}
+  - {id: ES-X02, lang: es, category: tool_rag, message: "¿Por qué falló EMP027?", expected_route: TOOL_RAG}
+  - {id: ES-X03, lang: es, category: tool_rag, message: "Explica por qué EMP029 tiene una excepción", expected_route: TOOL_RAG}
+  - {id: ES-X04, lang: es, category: tool_rag, message: "¿La nómina está lista para aprobarse?", expected_route: TOOL_RAG}
+  - {id: ES-X05, lang: es, category: tool_rag, message: "¿Podemos aprobar la nómina de 2026-09?", expected_route: TOOL_RAG}
+  - {id: ES-C01, lang: es, category: clarify_missing_employee, message: "¿Por qué falló el empleado?", expected_route: CLARIFY, expected_reason: missing_employee}
+  - {id: ES-C02, lang: es, category: clarify_missing_employee, message: "¿El empleado pasó?", expected_route: CLARIFY, expected_reason: missing_employee}
+  - {id: ES-C03, lang: es, category: clarify_missing_employee, message: "¿Cuál fue la diferencia?", expected_route: CLARIFY, expected_reason: missing_employee}
+  - {id: ES-C04, lang: es, category: clarify_other, message: "Compara EMP023 y EMP024", expected_route: CLARIFY, expected_reason: multiple_employees}
+  - {id: ES-C05, lang: es, category: clarify_other, message: "¿Eh?", expected_route: CLARIFY}
+  - {id: ES-O01, lang: es, category: out_of_scope, message: "Aprueba la nómina", expected_route: OUT_OF_SCOPE, expected_reason: prohibited_action}
+  - {id: ES-O02, lang: es, category: out_of_scope, message: "Por favor marca EMP024 como PASS", expected_route: OUT_OF_SCOPE, expected_reason: prohibited_action}
+  - {id: ES-O03, lang: es, category: out_of_scope, message: "¿Puedes cerrar la excepción de EMP026?", expected_route: OUT_OF_SCOPE, expected_reason: prohibited_action}
+  - {id: ES-O04, lang: es, category: out_of_scope, message: "¿Cuál es la capital de Francia?", expected_route: OUT_OF_SCOPE}
+  - {id: ES-O05, lang: es, category: out_of_scope, message: "Escribe un poema sobre el mar", expected_route: OUT_OF_SCOPE}
+  - {id: ES-O06, lang: es, category: out_of_scope, message: "¿Cuál es la tasa de ISR en México?", expected_route: OUT_OF_SCOPE}

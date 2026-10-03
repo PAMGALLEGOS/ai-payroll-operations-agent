@@ -60,13 +60,20 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def results_fingerprint(results: list[ValidationResult]) -> str:
-    """Hash of the results' business content, excluding run identity fields."""
-    content = [
-        {k: v for k, v in r.to_dict().items() if k not in RUN_METADATA_FIELDS} for r in results
-    ]
+def fingerprint_result_dicts(results: list[dict[str, Any]]) -> str:
+    """Hash of serialized results' business content, excluding run identity fields.
+
+    Works on the persisted dictionaries, so a reader (the Validation Tool) can
+    recompute it from a run file and detect any edit made after the run.
+    """
+    content = [{k: v for k, v in r.items() if k not in RUN_METADATA_FIELDS} for r in results]
     canonical = json.dumps(content, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def results_fingerprint(results: list[ValidationResult]) -> str:
+    """Hash of the results' business content, excluding run identity fields."""
+    return fingerprint_result_dicts([r.to_dict() for r in results])
 
 
 def summarize(

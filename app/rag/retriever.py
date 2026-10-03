@@ -21,9 +21,9 @@ from app.rag.vector_index import VectorIndexError, VectorIndex
 
 # Default minimum similarity per provider.
 #   fake:   calibrated on tests/evaluation/retrieval_cases.yaml (word-overlap scores).
-#   gemini: PROVISIONAL — must be calibrated with scripts/evaluate_retrieval.py
-#           once real Gemini access is available.
-DEFAULT_MIN_SCORE = {"fake": 0.13, "gemini": 0.60}
+#   gemini: calibrated with real Gemini (CP2 evaluation, decision N5): lowest
+#           in-scope top score 0.7111, highest out-of-scope 0.5640 -> 0.638.
+DEFAULT_MIN_SCORE = {"fake": 0.13, "gemini": 0.638}
 
 
 @dataclass(frozen=True)

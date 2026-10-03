@@ -3,10 +3,10 @@
 > **Synthetic data only.** No real employees, payroll data, corporate documents,
 > production systems or credentials are used anywhere in this repository.
 
-**Current status: CP2 — Knowledge & RAG** (CP1 deterministic validation core
-approved). The Agent, Auditor, API, web app and GCP deployment are added in
-later checkpoints, only after each checkpoint is approved. The full README
-(architecture, deployment, example questions) is written in Phase 14.
+**Current status: CP3 — Agent & Orchestration** (CP1 validation core and CP2
+knowledge & RAG approved). FastAPI, Streamlit, structured file logging and GCP
+deployment come in later checkpoints, only after each checkpoint is approved.
+The full README (architecture, deployment, example questions) is written in Phase 14.
 
 ## Core principle
 
@@ -14,9 +14,24 @@ later checkpoints, only after each checkpoint is approved. The full README
 |---|---|
 | "What does the deterministic validation result say?" | **Payroll Validation Engine** (CP1) — the authoritative source of truth |
 | "What does the documented knowledge say?" | **RAG layer** (CP2) — documentary evidence only |
+| "What is the user asking, and how do I explain it?" | **Agent** (CP3) — intent, routing, orchestration, explanation |
 
-The RAG layer never calculates payroll, never decides PASS / FAIL and never
-modifies Engine results. The Agent (CP3) will combine both.
+The LLM classifies intent and writes explanations from evidence it is given.
+Routes, entities, Engine facts, numbers and statuses are always decided by
+deterministic code. The Agent never recalculates, changes or approves anything:
+exception and approval decisions remain with a human reviewer.
+
+## Agent routes
+
+| Route | Example (EN / ES) | Answer |
+|---|---|---|
+| `RAG` | "What is the net pay tolerance?" / "¿Quién aprueba la nómina?" | LLM, only from cited chunks |
+| `TOOL` | "Did EMP024 pass?" / "¿Cuántas excepciones hay?" | Deterministic template, no LLM |
+| `TOOL_RAG` | "Why did EMP024 fail?" / "¿La nómina está lista para aprobarse?" | Engine facts by template + cited LLM explanation |
+| `CLARIFY` | "Why did the employee fail?" | Template; the next message can complete the question |
+| `OUT_OF_SCOPE` | "Approve the payroll" / "¿Tasa de ISR en México?" | Template |
+
+Every generated answer passes the Auditor (ALLOW / REVISE once / BLOCK).
 
 ## Components
 
@@ -24,16 +39,13 @@ modifies Engine results. The Agent (CP3) will combine both.
 |---|---|---|
 | Validation rules | `config/validation_rules.yaml` | Single source of truth: formulas, field mappings, tolerances |
 | Validation Engine | `app/validation/` | Expected → provider value → difference → tolerance → PASS/FAIL → result |
-| Batch run | `scripts/run_validation.py` | Runs the Engine and persists a versioned run file |
+| Validation Tool | `app/validation/tool.py` | Read-only, integrity-checked access to the latest persisted run |
 | Knowledge base | `knowledge/` | 9 synthetic documents: 3 SOPs, 5 rules, 1 blueprint |
-| Document loader | `app/rag/documents.py` | Markdown + front matter; refuses documents not marked `synthetic: true` |
-| Chunking | `app/rag/chunking.py` | One chunk per section, with traceable metadata |
-| Embeddings | `app/rag/embeddings.py` | Provider interface: Gemini (approved) + deterministic fake for tests |
-| Vector index | `app/rag/vector_index.py` | One JSON file + plain-Python cosine similarity |
-| Ingestion | `scripts/ingest_knowledge.py` | Documents → chunks → embeddings → index (once) |
-| Retrieval | `scripts/search_knowledge.py` | Question → embedding → similarity search → chunks + metadata |
-| Consistency control | `app/rag/consistency.py` | Fails if documentation and the rules YAML drift apart |
-| Retrieval evaluation | `scripts/evaluate_retrieval.py` | hit@k, MRR, out-of-scope rejection, threshold calibration |
+| RAG | `app/rag/` | Chunking, embeddings (Gemini + fake), JSON index, retrieval, docs ↔ YAML check |
+| LLM clients | `app/llm/` | `LLMClient` interface: Gemini (structured output) + scriptable fake |
+| Agent | `app/agent/` | Language, entities, intent, routing matrix, session, templates, explainer, orchestrator |
+| Auditor | `app/audit/` | Deterministic checks and ALLOW / REVISE / BLOCK |
+| Scripts | `scripts/` | Batch run, ingestion, search, retrieval and Agent evaluation, console chat |
 
 ## Run locally
 
@@ -45,30 +57,33 @@ python3.11 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# All automated tests (no API key needed)
+# All automated tests (no API key, no network)
 python -m pytest -v
 
-# CP1 — validation batch
+# Prepare data
 python scripts/run_validation.py --period 2026-09
-
-# CP2 — knowledge index and search with the offline test double
 python scripts/ingest_knowledge.py --provider fake
-python scripts/search_knowledge.py "Is a difference exactly equal to the tolerance a PASS?" --provider fake
-python scripts/evaluate_retrieval.py --provider fake
+
+# Talk to the Agent offline
+python scripts/ask_agent.py --provider fake
+python scripts/ask_agent.py --provider fake "Why did EMP024 fail?"
+python scripts/evaluate_agent.py --provider fake
 ```
 
 ### With real Gemini
 
 ```bash
-cp .env.example .env               # then set GEMINI_API_KEY in .env
+cp .env.example .env               # set GEMINI_API_KEY and GEMINI_MODEL in .env
 python scripts/ingest_knowledge.py --provider gemini
-python scripts/search_knowledge.py "Who approves the payroll?" --provider gemini
+python scripts/ask_agent.py --provider gemini "¿Por qué falló EMP027?"
 python scripts/evaluate_retrieval.py --provider gemini
-python -m pytest -m eval -v        # evaluation tests against real Gemini
+python scripts/evaluate_agent.py --provider gemini --out cp3_gemini_eval.json
+python -m pytest -m eval -v        # retrieval + Agent targets against real Gemini
 ```
 
-The fake provider measures word overlap only. Real retrieval quality and the
-Gemini similarity threshold are measured with the Gemini steps above.
+The fake providers share the deterministic keyword rules of the fallback, so
+their scores measure the deterministic layer only. Real routing and explanation
+quality are measured with the Gemini steps above.
 
 ## Outputs (generated locally, not committed)
 

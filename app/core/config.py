@@ -23,11 +23,13 @@ class Settings(BaseSettings):
         env_ignore_empty=True,  # an empty value in .env means "use the default"
     )
 
+    # --- Shared Gemini credential ---
+    gemini_api_key: SecretStr | None = None
+
     # --- Embeddings (CP2) ---
     # "gemini" is the approved provider (D2). "fake" is a deterministic,
     # offline test double for development, tests and demos without credentials.
     embeddings_provider: Literal["gemini", "fake"] = "gemini"
-    gemini_api_key: SecretStr | None = None
     gemini_embedding_model: str = "gemini-embedding-001"
     gemini_embedding_dimensions: int = 768
 
@@ -36,6 +38,16 @@ class Settings(BaseSettings):
     # Minimum cosine similarity for a chunk to count as evidence. Empty means
     # "use the provider's default" (see app/rag/retriever.py).
     rag_min_score: float | None = None
+
+    # --- Agent LLM (CP3) ---
+    llm_provider: Literal["gemini", "fake"] = "gemini"
+    # No default on purpose (decision C3-08): the text model must be chosen
+    # explicitly and confirmed against the real Gemini API.
+    gemini_model: str | None = None
+    llm_timeout_seconds: int = 30
+
+    # --- Session (CP3, decision D17) ---
+    session_ttl_minutes: int = 30
 
 
 @lru_cache
