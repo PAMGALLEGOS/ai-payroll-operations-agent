@@ -3,63 +3,74 @@
 > **Synthetic data only.** No real employees, payroll data, corporate documents,
 > production systems or credentials are used anywhere in this repository.
 
-**Current status: CP1 — deterministic validation core.** The RAG pipeline, Agent,
-Auditor, API, web app and GCP deployment are added in later checkpoints, only
-after each checkpoint is approved. The full README (architecture, deployment,
-example questions) is written in Phase 14.
+**Current status: CP2 — Knowledge & RAG** (CP1 deterministic validation core
+approved). The Agent, Auditor, API, web app and GCP deployment are added in
+later checkpoints, only after each checkpoint is approved. The full README
+(architecture, deployment, example questions) is written in Phase 14.
 
 ## Core principle
 
-The **Payroll Validation Engine is the authoritative source of truth**. It
-calculates expected values, differences, tolerances, PASS/FAIL, exceptions and
-summary counts. The LLM (later checkpoints) only interprets and explains those
-persisted results — it never recalculates or overrides them.
+| Question | Answered by |
+|---|---|
+| "What does the deterministic validation result say?" | **Payroll Validation Engine** (CP1) — the authoritative source of truth |
+| "What does the documented knowledge say?" | **RAG layer** (CP2) — documentary evidence only |
 
-## What CP1 contains
+The RAG layer never calculates payroll, never decides PASS / FAIL and never
+modifies Engine results. The Agent (CP3) will combine both.
+
+## Components
 
 | Component | Path | What it does |
 |---|---|---|
 | Validation rules | `config/validation_rules.yaml` | Single source of truth: formulas, field mappings, tolerances |
-| Rules loader | `app/validation/rules_loader.py` | Reads and strictly validates the rules file |
-| Money parsing | `app/validation/money.py` | Exact `Decimal` amounts; flags missing/invalid values |
-| Data loader | `app/validation/data_loader.py` | Reads the synthetic CSVs (structure checks only) |
-| Engine | `app/validation/engine.py` | Expected → provider value → difference → tolerance → PASS/FAIL → result |
-| Batch run | `app/validation/batch.py` | Runs the Engine, adds summary counts, persists a versioned run file |
-| Contracts | `app/core/contracts.py` | `ValidationResult`, status and reason codes |
-| Dataset generator | `scripts/generate_synthetic_data.py` | Deterministic 30-employee synthetic dataset |
-| Batch entry point | `scripts/run_validation.py` | Command to run a validation batch |
-| Tests | `tests/unit/` | 86 deterministic unit tests |
+| Validation Engine | `app/validation/` | Expected → provider value → difference → tolerance → PASS/FAIL → result |
+| Batch run | `scripts/run_validation.py` | Runs the Engine and persists a versioned run file |
+| Knowledge base | `knowledge/` | 9 synthetic documents: 3 SOPs, 5 rules, 1 blueprint |
+| Document loader | `app/rag/documents.py` | Markdown + front matter; refuses documents not marked `synthetic: true` |
+| Chunking | `app/rag/chunking.py` | One chunk per section, with traceable metadata |
+| Embeddings | `app/rag/embeddings.py` | Provider interface: Gemini (approved) + deterministic fake for tests |
+| Vector index | `app/rag/vector_index.py` | One JSON file + plain-Python cosine similarity |
+| Ingestion | `scripts/ingest_knowledge.py` | Documents → chunks → embeddings → index (once) |
+| Retrieval | `scripts/search_knowledge.py` | Question → embedding → similarity search → chunks + metadata |
+| Consistency control | `app/rag/consistency.py` | Fails if documentation and the rules YAML drift apart |
+| Retrieval evaluation | `scripts/evaluate_retrieval.py` | hit@k, MRR, out-of-scope rejection, threshold calibration |
 
-## Run CP1 locally
+## Run locally
 
 Requires **Python 3.11**.
 
 ```bash
 cd ai-payroll-agent
-
-# 1. Create and activate the virtual environment
 python3.11 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
-
-# 2. Install pinned dependencies
 pip install -r requirements.txt
 
-# 3. Run the unit tests
+# All automated tests (no API key needed)
 python -m pytest -v
 
-# 4. Run a validation batch for the synthetic period
+# CP1 — validation batch
 python scripts/run_validation.py --period 2026-09
 
-# (Optional) Regenerate the synthetic dataset — produces byte-identical files
-python scripts/generate_synthetic_data.py --period 2026-09
+# CP2 — knowledge index and search with the offline test double
+python scripts/ingest_knowledge.py --provider fake
+python scripts/search_knowledge.py "Is a difference exactly equal to the tolerance a PASS?" --provider fake
+python scripts/evaluate_retrieval.py --provider fake
 ```
 
-No API keys are needed for CP1. `.env.example` lists placeholders for later checkpoints.
+### With real Gemini
 
-## Outputs
+```bash
+cp .env.example .env               # then set GEMINI_API_KEY in .env
+python scripts/ingest_knowledge.py --provider gemini
+python scripts/search_knowledge.py "Who approves the payroll?" --provider gemini
+python scripts/evaluate_retrieval.py --provider gemini
+python -m pytest -m eval -v        # evaluation tests against real Gemini
+```
 
-`data/validation_results/validation_run_<period>-<timestamp>.json` — an immutable
-run file with a header (run id, engine and rules versions, SHA-256 of the inputs,
-results fingerprint), deterministic summary counts and one result per employee
-and validation type. `latest_<period>.json` points to the most recent run.
-Run files are generated locally and are not committed.
+The fake provider measures word overlap only. Real retrieval quality and the
+Gemini similarity threshold are measured with the Gemini steps above.
+
+## Outputs (generated locally, not committed)
+
+- `data/validation_results/` — immutable validation run files and a `latest_<period>.json` pointer.
+- `data/vector_index/<provider>/index.json` — the knowledge index for each embeddings provider.

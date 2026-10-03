@@ -14,6 +14,9 @@ VALIDATION_RULES_FILE = CONFIG_DIR / "validation_rules.yaml"
 DATA_DIR = REPO_ROOT / "data"
 SYNTHETIC_PAYROLL_DIR = DATA_DIR / "synthetic_payroll"
 VALIDATION_RESULTS_DIR = DATA_DIR / "validation_results"
+VECTOR_INDEX_DIR = DATA_DIR / "vector_index"
+
+KNOWLEDGE_DIR = REPO_ROOT / "knowledge"
 
 
 def payroll_inputs_file(period: str, base_dir: Path = SYNTHETIC_PAYROLL_DIR) -> Path:

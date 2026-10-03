@@ -7,6 +7,8 @@ requires-python = ">=3.11,<3.12"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+# Evaluation tests call real Gemini; they never run by default (use: pytest -m eval).
+addopts = "-m 'not eval'"
 markers = [
-    "eval: evaluation cases that call the real LLM (not used in CP1)",
+    "eval: evaluation against real Gemini (requires GEMINI_API_KEY)",
 ]

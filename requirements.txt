@@ -1,11 +1,11 @@
 # AI Payroll Operations & Validation Agent — pinned dependencies (Python 3.11)
 #
-# CP1 scope: the deterministic Validation Engine only needs YAML parsing and tests.
-# Dependencies for later checkpoints (FastAPI, Streamlit, Gemini SDK, numpy, httpx...)
-# are added only when the corresponding checkpoint is approved.
+# Dependencies are added in the checkpoint that first uses them.
 
 # --- Runtime ---
-PyYAML==6.0.3
+PyYAML==6.0.3              # CP1: rules file, CP2: document front matter
+pydantic-settings==2.15.0  # CP2: settings from environment / .env (approved in D13)
+google-genai==2.28.0       # CP2: Gemini Embeddings (approved in D1/D2)
 
 # --- Development / testing ---
 pytest==9.1.1

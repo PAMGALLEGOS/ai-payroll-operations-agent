@@ -1,0 +1,3 @@
+# Keep LF line endings on every OS: fingerprints and byte-identical
+# dataset checks depend on exact file content.
+* text=auto eol=lf

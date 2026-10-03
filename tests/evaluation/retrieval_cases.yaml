@@ -1,0 +1,72 @@
+# Retrieval evaluation cases (CP2).
+#
+# in_scope:     the knowledge base documents the answer. A case is a hit when a
+#               chunk from one of `expected_doc_ids` is retrieved.
+# out_of_scope: the knowledge base has no answer. Retrieval should report
+#               insufficient evidence (no chunk above the similarity threshold).
+#
+# Used by scripts/evaluate_retrieval.py and tests/evaluation/test_retrieval_eval.py.
+# The real measurement of retrieval quality requires Gemini; the fake provider
+# only checks that the pipeline works end to end.
+
+in_scope:
+  - id: R01
+    query: Who approves the payroll?
+    expected_doc_ids: [SOP-003, SOP-001]
+  - id: R02
+    query: What is the net pay tolerance?
+    expected_doc_ids: [RULE-003, RULE-004, BP-001]
+  - id: R03
+    query: How is gross pay calculated?
+    expected_doc_ids: [RULE-001, RULE-004, BP-001]
+  - id: R04
+    query: What happens when an input value is missing?
+    expected_doc_ids: [RULE-005, SOP-002]
+  - id: R05
+    query: Is a difference exactly equal to the tolerance a PASS?
+    expected_doc_ids: [RULE-004, BP-001]
+  - id: R06
+    query: How do I review an exception that is out of tolerance?
+    expected_doc_ids: [SOP-002]
+  - id: R07
+    query: Can the preparer approve their own payroll?
+    expected_doc_ids: [SOP-003]
+  - id: R08
+    query: What does INVALID_INPUT mean?
+    expected_doc_ids: [RULE-005, BP-001, SOP-002]
+  - id: R09
+    query: Which deductions are included in total deductions?
+    expected_doc_ids: [RULE-002]
+  - id: R10
+    query: Why did net pay inherit the exception?
+    expected_doc_ids: [RULE-005, RULE-003, RULE-001, RULE-002]
+  - id: R11
+    query: What evidence does a validation run produce?
+    expected_doc_ids: [SOP-001, BP-001]
+  - id: R12
+    query: Can the AI assistant approve payroll?
+    expected_doc_ids: [SOP-003, SOP-001, SOP-002, BP-001]
+  - id: R13
+    query: How is the difference between provider and expected value calculated?
+    expected_doc_ids: [RULE-004, BP-001]
+  - id: R14
+    query: What are the prerequisites before the approver can approve a payroll period?
+    expected_doc_ids: [SOP-003]
+  - id: R15
+    query: Is a negative deduction allowed?
+    expected_doc_ids: [RULE-002, RULE-005]
+  - id: R16
+    query: What happens if an exception cannot be resolved before the payroll deadline?
+    expected_doc_ids: [SOP-002]
+
+out_of_scope:
+  - id: O01
+    query: What is the capital of France?
+  - id: O02
+    query: Recommend a good pasta recipe
+  - id: O03
+    query: How do I book vacation days?
+  - id: O04
+    query: What is the weather tomorrow?
+  - id: O05
+    query: Write a poem about the ocean
