@@ -70,6 +70,9 @@ def compute_kpis(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
             for route, v in sorted(latency.items())
         },
         "answer_modes": dict(Counter(e.get("answer_mode") for e in completed)),
+        "llm_fallbacks_by_task": dict(Counter(e.get("task") for e in of("llm_fallback"))),
+        "llm_errors": dict(Counter(e.get("error", e.get("error_type")) for e in of("llm_called")
+                                   if not e.get("ok"))),
         "auditor_final_verdicts": dict(verdicts),
         "rewrite_rate": round(revised / len(completed), 4) if completed else 0.0,
         "tool_calls": len(of("tool_called")),
@@ -116,6 +119,9 @@ def main() -> int:
     print(f"Retrieval outcomes    : {kpis['retrieval']}")
     print(f"LLM calls             : {kpis['llm_calls']}")
     print(f"Intent fallbacks      : {kpis['fallbacks']}")
+    print(f"LLM fallbacks by task : {kpis['llm_fallbacks_by_task'] or 'none'}")
+    for reason, count in kpis["llm_errors"].items():
+        print(f"LLM error ({count}x)     : {reason}")
     print(f"Contained errors      : {kpis['errors'] or 'none'}")
     print(f"API requests          : {kpis['api_requests']}")
     return 0

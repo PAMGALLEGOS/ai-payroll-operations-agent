@@ -85,3 +85,28 @@ def test_ui_survives_api_down(monkeypatch):
     app.run()
     assert not app.exception
     assert any("run_demo.py" in e.value for e in app.error)
+
+
+def _ui_with(api, monkeypatch):
+    in_process = ApiClient("http://testserver")
+    in_process._client = api
+    monkeypatch.setattr(api_client, "make_client", lambda: in_process)
+    app = AppTest.from_file(APP, default_timeout=30)
+    app.run()
+    return app
+
+
+def test_chat_warns_when_llm_unavailable(api_factory, monkeypatch):
+    from tests.helpers import failing_llm
+
+    app = _ui_with(api_factory(llm=failing_llm()), monkeypatch)
+    app.radio[1].set_value("chat").run()
+    app.chat_input[0].set_value("¿Quién aprueba la nómina?").run()
+    assert not app.exception
+    assert any("LLM no disponible" in w.value for w in app.warning)
+
+
+def test_chat_has_no_warning_when_llm_works(ui):
+    ui.radio[1].set_value("chat").run()
+    ui.chat_input[0].set_value("¿Quién aprueba la nómina?").run()
+    assert not any("LLM no disponible" in w.value for w in ui.warning)

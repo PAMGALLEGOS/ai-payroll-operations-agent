@@ -1,0 +1,157 @@
+{
+  "llm": "gemini/gemini-3.8-flash",
+  "embeddings": "gemini/models/gemini-embedding-001",
+  "case_set": "stratified",
+  "estimated_llm_calls": 16,
+  "cases": 14,
+  "cases_run": 11,
+  "case_ids": [
+    "EN-R01",
+    "EN-T01",
+    "EN-X01",
+    "EN-C01",
+    "EN-C04",
+    "EN-O01",
+    "EN-O04",
+    "ES-R01",
+    "ES-T01",
+    "ES-X01",
+    "ES-C01",
+    "ES-C04",
+    "ES-O01",
+    "ES-O04"
+  ],
+  "n10_check": {
+    "cases": [
+      {
+        "id": "ES-R01",
+        "query": "net pay tolerance",
+        "english_rewrite": true
+      }
+    ],
+    "passed": true
+  },
+  "routing_accuracy": 1.0,
+  "routing_accuracy_by_language": {
+    "en": 1.0,
+    "es": 1.0
+  },
+  "accuracy_by_category": {
+    "rag": 1.0,
+    "tool": 1.0,
+    "tool_rag": 1.0,
+    "clarify_missing_employee": 1.0,
+    "clarify_other": 1.0,
+    "out_of_scope": 1.0
+  },
+  "clarify_missing_employee": 1.0,
+  "out_of_scope": 1.0,
+  "agent_engine_consistency": 1.0,
+  "agent_engine_responses_checked": 4,
+  "intent_llm_rate": 0.3333,
+  "intent_classified_responses": 9,
+  "generation_success_rate": 0.5,
+  "generation_expected": 4,
+  "allow_without_rewrite_rate": 1.0,
+  "generated_answers": 2,
+  "llm_fallbacks": {
+    "intent": 7,
+    "rag_answer": 1,
+    "tool_rag_explain": 1
+  },
+  "language_match": 0.7857,
+  "latency_ms_by_route": {
+    "CLARIFY": {
+      "n": 3,
+      "mean": 21515,
+      "p95": 16638,
+      "max": 35069
+    },
+    "OUT_OF_SCOPE": {
+      "n": 2,
+      "mean": 15284,
+      "p95": 0,
+      "max": 30567
+    },
+    "RAG": {
+      "n": 2,
+      "mean": 38088,
+      "p95": 35559,
+      "max": 40617
+    },
+    "TOOL": {
+      "n": 2,
+      "mean": 31958,
+      "p95": 29381,
+      "max": 34535
+    },
+    "TOOL_RAG": {
+      "n": 2,
+      "mean": 47600,
+      "p95": 44945,
+      "max": 50256
+    }
+  },
+  "routing_failures": [],
+  "consistency_failures": [],
+  "seeded_auditor_detection": 1.0,
+  "seeded_cases": 16,
+  "seeded_missed": [],
+  "control_cases": 3,
+  "control_false_positives": [],
+  "targets": {
+    "routing_accuracy": {
+      "target": 0.9,
+      "actual": 1.0,
+      "met": true
+    },
+    "clarify_missing_employee": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "out_of_scope": {
+      "target": 0.9,
+      "actual": 1.0,
+      "met": true
+    },
+    "agent_engine_consistency": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "seeded_auditor_detection": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "intent_llm_rate": {
+      "target": 1.0,
+      "actual": 0.3333,
+      "met": false
+    },
+    "generation_success_rate": {
+      "target": 1.0,
+      "actual": 0.5,
+      "met": false
+    }
+  },
+  "provider_errors": {
+    "quota_429": 2,
+    "unavailable_503": 7
+  },
+  "status": "INCONCLUSIVE",
+  "quota_guard": {
+    "tripped": true,
+    "reason": "3 consecutive quota_429 responses",
+    "refused_requests": 1,
+    "error_samples": {
+      "quota_429": "ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\\nPlease retry in 9h46m56.894099174s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.8-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '35216s'}]}}",
+      "unavailable_503": "ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+    }
+  },
+  "pacing": {
+    "min_interval_seconds": 13.0,
+    "requests": 26
+  }
+}

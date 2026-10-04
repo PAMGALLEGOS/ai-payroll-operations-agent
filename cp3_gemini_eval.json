@@ -1,0 +1,91 @@
+{
+  "llm": "gemini/GEMINI_MODEL=gemini-3.8-flash",
+  "embeddings": "gemini/models/gemini-embedding-001",
+  "cases": 56,
+  "routing_accuracy": 1.0,
+  "routing_accuracy_by_language": {
+    "en": 1.0,
+    "es": 1.0
+  },
+  "accuracy_by_category": {
+    "rag": 1.0,
+    "tool": 1.0,
+    "tool_rag": 1.0,
+    "clarify_missing_employee": 1.0,
+    "clarify_other": 1.0,
+    "out_of_scope": 1.0
+  },
+  "clarify_missing_employee": 1.0,
+  "out_of_scope": 1.0,
+  "agent_engine_consistency": 1.0,
+  "agent_engine_responses_checked": 22,
+  "allow_without_rewrite_rate": 1.0,
+  "generated_answers": 12,
+  "language_match": 1.0,
+  "latency_ms_by_route": {
+    "CLARIFY": {
+      "n": 10,
+      "mean": 152,
+      "p95": 196,
+      "max": 220
+    },
+    "OUT_OF_SCOPE": {
+      "n": 12,
+      "mean": 66,
+      "p95": 143,
+      "max": 196
+    },
+    "RAG": {
+      "n": 12,
+      "mean": 656,
+      "p95": 819,
+      "max": 1417
+    },
+    "TOOL": {
+      "n": 12,
+      "mean": 164,
+      "p95": 211,
+      "max": 269
+    },
+    "TOOL_RAG": {
+      "n": 10,
+      "mean": 520,
+      "p95": 599,
+      "max": 608
+    }
+  },
+  "routing_failures": [],
+  "consistency_failures": [],
+  "seeded_auditor_detection": 1.0,
+  "seeded_cases": 16,
+  "seeded_missed": [],
+  "control_cases": 3,
+  "control_false_positives": [],
+  "targets": {
+    "routing_accuracy": {
+      "target": 0.9,
+      "actual": 1.0,
+      "met": true
+    },
+    "clarify_missing_employee": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "out_of_scope": {
+      "target": 0.9,
+      "actual": 1.0,
+      "met": true
+    },
+    "agent_engine_consistency": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "seeded_auditor_detection": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    }
+  }
+}

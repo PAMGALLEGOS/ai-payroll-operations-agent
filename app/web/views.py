@@ -94,6 +94,20 @@ def technical_details(response: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def llm_degraded(response: dict[str, Any]) -> bool:
+    """True when an LLM step failed and a deterministic answer is shown instead (QA warning).
+
+    An Auditor BLOCK also ends in `safe_fallback`, but there the LLM did answer, so it
+    is not reported as "LLM unavailable".
+    """
+    if (response.get("versions") or {}).get("llm_degraded"):
+        return True
+    if response.get("route_source") == "fallback":
+        return True
+    return (response.get("route") in ("RAG", "TOOL_RAG") and response.get("evidence_status") == "sufficient"
+            and response.get("answer_mode") == "template")
+
+
 def health_rows(health: dict[str, Any], lang: str) -> list[tuple[str, str]]:
     rows = []
     for name, component in health.get("components", {}).items():

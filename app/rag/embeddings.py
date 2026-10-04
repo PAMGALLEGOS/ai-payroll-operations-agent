@@ -120,6 +120,11 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
     def __init__(self, api_key: str, model: str, dimensions: int, client: Any | None = None):
         if not api_key:
             raise EmbeddingsConfigError("GEMINI_API_KEY is empty")
+        from app.core.model_names import model_name_problem
+
+        problem = model_name_problem("GEMINI_EMBEDDING_MODEL", model, "models/gemini-embedding-001")
+        if problem:
+            raise EmbeddingsConfigError(problem)   # F6b: fail fast
         if "embedding-2" in model:
             raise EmbeddingsConfigError(
                 f"Model '{model}' does not support task_type and is not supported in this PoC; "

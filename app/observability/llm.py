@@ -1,7 +1,9 @@
 """LLM client wrapper that reports every call to the observer.
 
 It forwards calls unchanged to the wrapped client and emits `llm_called` with
-the task, duration and success. Prompts and outputs are never recorded (D4-09).
+the task, duration and success. On failure it also records the redacted reason
+(F1), so a failing provider is diagnosable from the log. Prompts and outputs
+are never recorded (D4-09).
 Any other attribute (for example the fake client's `script` / `calls_for`
 helpers used by tests) is forwarded to the wrapped client.
 """
@@ -13,6 +15,7 @@ from typing import Any
 
 from app.llm.client import LLMClient, LLMError, SchemaT
 from app.observability.events import AgentObserver
+from app.observability.redact import redact
 
 
 class ObservedLLMClient(LLMClient):
@@ -31,7 +34,7 @@ class ObservedLLMClient(LLMClient):
             result = call()
         except LLMError as error:
             self._observer.emit("llm_called", task=task, duration_ms=int((time.perf_counter() - started) * 1000),
-                                ok=False, error_type=type(error).__name__)
+                                ok=False, error_type=type(error).__name__, error=redact(str(error)))
             raise
         self._observer.emit("llm_called", task=task, duration_ms=int((time.perf_counter() - started) * 1000), ok=True)
         return result

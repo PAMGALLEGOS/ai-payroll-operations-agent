@@ -1,0 +1,119 @@
+{
+  "llm": "gemini/gemini-3.8-flash",
+  "embeddings": "gemini/models/gemini-embedding-001",
+  "cases": 56,
+  "routing_accuracy": 1.0,
+  "routing_accuracy_by_language": {
+    "en": 1.0,
+    "es": 1.0
+  },
+  "accuracy_by_category": {
+    "rag": 1.0,
+    "tool": 1.0,
+    "tool_rag": 1.0,
+    "clarify_missing_employee": 1.0,
+    "clarify_other": 1.0,
+    "out_of_scope": 1.0
+  },
+  "clarify_missing_employee": 1.0,
+  "out_of_scope": 1.0,
+  "agent_engine_consistency": 1.0,
+  "agent_engine_responses_checked": 22,
+  "intent_llm_rate": 0.0,
+  "intent_classified_responses": 48,
+  "generation_success_rate": 0.0,
+  "generation_expected": 22,
+  "allow_without_rewrite_rate": 1.0,
+  "generated_answers": 0,
+  "llm_fallbacks": {
+    "intent": 50,
+    "rag_answer": 12,
+    "tool_rag_explain": 10
+  },
+  "language_match": 1.0,
+  "latency_ms_by_route": {
+    "CLARIFY": {
+      "n": 10,
+      "mean": 25988,
+      "p95": 26130,
+      "max": 26212
+    },
+    "OUT_OF_SCOPE": {
+      "n": 12,
+      "mean": 13006,
+      "p95": 26112,
+      "max": 26138
+    },
+    "RAG": {
+      "n": 12,
+      "mean": 50954,
+      "p95": 52021,
+      "max": 52117
+    },
+    "TOOL": {
+      "n": 12,
+      "mean": 25992,
+      "p95": 26163,
+      "max": 26171
+    },
+    "TOOL_RAG": {
+      "n": 10,
+      "mean": 51988,
+      "p95": 52168,
+      "max": 52174
+    }
+  },
+  "routing_failures": [],
+  "consistency_failures": [],
+  "seeded_auditor_detection": 1.0,
+  "seeded_cases": 16,
+  "seeded_missed": [],
+  "control_cases": 3,
+  "control_false_positives": [],
+  "targets": {
+    "routing_accuracy": {
+      "target": 0.9,
+      "actual": 1.0,
+      "met": true
+    },
+    "clarify_missing_employee": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "out_of_scope": {
+      "target": 0.9,
+      "actual": 1.0,
+      "met": true
+    },
+    "agent_engine_consistency": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "seeded_auditor_detection": {
+      "target": 1.0,
+      "actual": 1.0,
+      "met": true
+    },
+    "intent_llm_rate": {
+      "target": 1.0,
+      "actual": 0.0,
+      "met": false
+    },
+    "generation_success_rate": {
+      "target": 1.0,
+      "actual": 0.0,
+      "met": false
+    }
+  },
+  "provider_errors": {
+    "quota_429": 75,
+    "unavailable_503": 1
+  },
+  "status": "INCONCLUSIVE",
+  "pacing": {
+    "min_interval_seconds": 13.0,
+    "requests": 152
+  }
+}

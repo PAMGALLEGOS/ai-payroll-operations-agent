@@ -57,6 +57,7 @@ class Turn:
     validation_types: list[str] | None = None
     sources: dict[str, str] = field(default_factory=dict)
     prompts_used: list[str] = field(default_factory=list)
+    llm_degraded: list[str] = field(default_factory=list)   # LLM tasks that failed and fell back (F2)
 
 
 class Agent:
@@ -116,6 +117,8 @@ class Agent:
                     response = self._response(turn, "CLARIFY", R.t("safe_error", turn.language, trace_id=trace_id),
                                               "safe_fallback", route_source="error")
                 self._remember(turn, response)
+            # F2: which LLM tasks failed and were replaced by deterministic fallbacks.
+            response.versions["llm_degraded"] = list(turn.llm_degraded)
             response.latency_ms = int((self.clock() - started) * 1000)
             self.observer.emit("route_decided", route=response.route, intent=response.intent,
                                route_source=response.route_source)
@@ -141,6 +144,8 @@ class Agent:
                 decision.intent, decision.retrieval_query, decision.source)
             turn.prompts_used.append(prompts.INTENT)
             self.observer.emit("intent_identified", intent=decision.intent, source=decision.source)
+            if decision.source == "fallback":
+                self._degraded(turn, "intent")
             if len(turn.entities.employee_ids) > 1:
                 return self._clarify(turn, "multiple_employees", route_source="rule")
 
@@ -315,7 +320,8 @@ class Agent:
         turn.prompts_used.append(prompts.TOOL_RAG_EXPLAIN)
         ctx = self._audit_context(turn, "TOOL_RAG", result, evidence, requires_citation=True)
         explanation, report, revised = self._generate_audited(
-            lambda issues: self.explainer.explain_results(turn.message, facts_payload, evidence, lang, issues), ctx)
+            lambda issues: self.explainer.explain_results(turn.message, facts_payload, evidence, lang, issues), ctx,
+            turn=turn, task="tool_rag_explain")
 
         if explanation is None:
             fallback = R.t("blocked", lang) if report else R.t("explanation_unavailable", lang)
@@ -344,7 +350,8 @@ class Agent:
         turn.prompts_used.append(prompts.RAG_ANSWER)
         ctx = self._audit_context(turn, "RAG", None, evidence, requires_citation=True)
         answer, report, revised = self._generate_audited(
-            lambda issues: self.explainer.answer_from_documents(turn.message, evidence, lang, issues), ctx)
+            lambda issues: self.explainer.answer_from_documents(turn.message, evidence, lang, issues), ctx,
+            turn=turn, task="rag_answer")
 
         if answer is None:
             prefix = R.t("blocked", lang) if report else R.t("explanation_unavailable", lang)
@@ -376,12 +383,17 @@ class Agent:
         self.observer.emit("rag_retrieved", evidence_status=outcome, chunks=len(evidence), top_score=top)
         return evidence, outcome
 
-    def _generate_audited(self, generate: Callable[[list[str] | None], str],
-                          ctx: AuditContext) -> tuple[str | None, AuditReport | None, bool]:
+    def _degraded(self, turn: Turn, task: str) -> None:
+        turn.llm_degraded.append(task)
+        self.observer.emit("llm_fallback", task=task)
+
+    def _generate_audited(self, generate: Callable[[list[str] | None], str], ctx: AuditContext, *,
+                          turn: Turn, task: str) -> tuple[str | None, AuditReport | None, bool]:
         """Generate, audit, rewrite once if needed (D9). Returns (text or None, last report, revised)."""
         try:
             text = generate(None)
         except LLMError:
+            self._degraded(turn, task)
             return None, None, False
         report = self.auditor.review(text, ctx)
         self._emit_audit(report, 1)
@@ -392,6 +404,7 @@ class Agent:
         try:
             rewritten = generate(report.feedback())
         except LLMError:
+            self._degraded(turn, task)
             return None, report, True
         second = self.auditor.review(rewritten, ctx, is_rewrite=True)
         self._emit_audit(second, 2)

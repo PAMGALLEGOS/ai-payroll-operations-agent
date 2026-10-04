@@ -1,0 +1,41 @@
+# Build context for the Cloud Run image. Secrets, local evidence and generated
+# artefacts never enter the image (the validation run and the fake index are
+# rebuilt inside the build).
+
+# --- secrets / local configuration ---
+.env
+.env.*
+*.pem
+*.key
+**/credentials*.json
+**/service-account*.json
+
+# --- version control, environments, caches ---
+.git
+.gitattributes
+.gitignore
+.venv
+venv
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.idea
+.vscode
+.DS_Store
+
+# --- local runtime artefacts and evidence ---
+logs
+*.log
+*.jsonl
+*.zip
+release
+cp*_gemini*.json
+eval*.json
+data/validation_results/*.json
+data/vector_index/*
+!data/vector_index/gemini/
+
+# --- not needed at run time ---
+tests
+docs
+README.md

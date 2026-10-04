@@ -17,7 +17,9 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.core.model_names import model_name_problem
 from app.llm.client import LLMClient, LLMConfigError, LLMError, SchemaT
+from app.observability.redact import redact
 
 MAX_ATTEMPTS = 2
 
@@ -33,8 +35,12 @@ class GeminiLLMClient(LLMClient):
                 "GEMINI_MODEL is not set. Choose the Gemini text model explicitly in .env "
                 "(decision C3-08: the model is confirmed against the real API, never assumed)."
             )
+        problem = model_name_problem("GEMINI_MODEL", model, "gemini-3.8-flash")
+        if problem:
+            raise LLMConfigError(problem)   # F6b: fail fast, never a silent fallback
         self.model = model
         self.timeout_ms = timeout_seconds * 1000
+        self._api_key = api_key   # only used to mask itself in error messages (F1)
         if client is None:
             from google import genai  # lazy: tests never need the SDK
 
@@ -73,7 +79,15 @@ class GeminiLLMClient(LLMClient):
                 last_error = error
             except Exception as error:  # SDK / network errors
                 last_error = error
-        raise LLMError(f"Gemini task '{task}' failed after {MAX_ATTEMPTS} attempts: {last_error}")
+        raise LLMError(self._failure(task, last_error))
+
+    def _failure(self, task: str, error: Exception | None) -> str:
+        """Readable, redacted reason: error class + provider message (F1)."""
+        detail = f"{type(error).__name__}: {error}" if error else "unknown error"
+        # Long limit here so diagnostics see the whole provider message; the event log
+        # truncates again to 300 characters (ObservedLLMClient).
+        return redact(f"Gemini task '{task}' failed after {MAX_ATTEMPTS} attempts: {detail}", [self._api_key],
+                      max_length=2000)
 
     def generate_text(self, *, task: str, system: str, user: str) -> str:
         last_error: Exception | None = None
@@ -82,4 +96,4 @@ class GeminiLLMClient(LLMClient):
                 return self._call(task, system, user, None).strip()
             except Exception as error:
                 last_error = error
-        raise LLMError(f"Gemini task '{task}' failed after {MAX_ATTEMPTS} attempts: {last_error}")
+        raise LLMError(self._failure(task, last_error))

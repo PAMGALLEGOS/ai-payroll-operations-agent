@@ -131,6 +131,8 @@ def render_dashboard() -> None:
 def render_response(response: dict) -> None:
     label, color = views.route_badge(response["route"], lang)
     st.badge(label, color=color)
+    if views.llm_degraded(response):
+        st.warning(t("llm_degraded", lang), icon="⚠️")
     st.markdown(response["answer"].replace("\n", "  \n"))
 
     validation = response.get("validation") or {}

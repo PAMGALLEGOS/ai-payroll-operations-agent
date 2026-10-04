@@ -63,6 +63,8 @@ LABELS: dict[str, dict[str, str]] = {
     "engine_facts": {"es": "Resultados del Engine (autoritativos)", "en": "Engine results (authoritative)"},
     "sources": {"es": "Fuentes documentales", "en": "Documentary sources"},
     "technical_details": {"es": "Detalles técnicos", "en": "Technical details"},
+    "llm_degraded": {"es": "LLM no disponible: se muestra información verificada (respuesta determinista).",
+                     "en": "LLM unavailable: showing verified information (deterministic answer)."},
     "thinking": {"es": "Consultando…", "en": "Working…"},
     "error_prefix": {"es": "Error de la API", "en": "API error"},
     "route_RAG": {"es": "Documentación", "en": "Documentation"},

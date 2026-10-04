@@ -46,3 +46,27 @@ def make_provider(**overrides: str) -> dict[str, str]:
 
 def by_type(results):
     return {r.validation_type: r for r in results}
+
+
+# ---------------------------------------------------------------- CP4 QA fixes
+FAKE_KEY = "AIzaSyFAKE0000000000000000000000000000"   # synthetic, never a real key
+
+
+def failing_llm(reason: str = "404 NOT_FOUND models/x is not found"):
+    """An LLM whose every call fails like a provider error that echoes the key (F1–F3, F7a tests)."""
+    from app.llm.client import LLMClient, LLMError
+
+    class AlwaysFailingLLM(LLMClient):
+        name, model = "failing", "failing-model"
+
+        def _fail(self, task):
+            raise LLMError(f"Gemini task '{task}' failed: {reason} "
+                           f"(request https://example.invalid/v1?key={FAKE_KEY})")
+
+        def generate_json(self, *, task, system, user, schema):
+            self._fail(task)
+
+        def generate_text(self, *, task, system, user):
+            self._fail(task)
+
+    return AlwaysFailingLLM()

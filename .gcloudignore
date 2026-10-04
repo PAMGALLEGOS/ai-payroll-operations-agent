@@ -1,0 +1,42 @@
+# Files uploaded by `gcloud run deploy --source .` (Cloud Build).
+# Explicit on purpose: without this file gcloud falls back to .gitignore, which
+# would drop the locally generated Gemini index (data/vector_index/gemini/).
+# The same secrets and local artefacts as .dockerignore are excluded.
+
+# --- secrets / local configuration ---
+.env
+.env.*
+*.pem
+*.key
+**/credentials*.json
+**/service-account*.json
+
+# --- version control, environments, caches ---
+.git
+.gitattributes
+.gitignore
+.gcloudignore
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
+.vscode/
+.DS_Store
+
+# --- local runtime artefacts and evidence ---
+logs/
+*.log
+*.jsonl
+*.zip
+release/
+cp*_gemini*.json
+eval*.json
+data/validation_results/*.json
+data/vector_index/fake/
+
+# --- not needed at run time ---
+tests/
+docs/
+README.md

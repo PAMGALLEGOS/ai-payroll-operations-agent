@@ -89,12 +89,28 @@ python scripts/evaluate_agent.py --provider fake
 
 ```bash
 cp .env.example .env               # set GEMINI_API_KEY and GEMINI_MODEL in .env
+python scripts/diagnose_llm.py     # first: checks the model and both LLM calls (key never printed)
 python scripts/ingest_knowledge.py --provider gemini
 python scripts/ask_agent.py --provider gemini "¿Por qué falló EMP027?"
 python scripts/evaluate_retrieval.py --provider gemini
 python scripts/evaluate_agent.py --provider gemini --out cp3_gemini_eval.json
-python -m pytest -m eval -v        # retrieval + Agent targets against real Gemini
+python -m pytest -m eval -v        # canary + retrieval + Agent targets against real Gemini
 ```
+
+`intent_llm_rate` and `generation_success_rate` (target 100 %) prove that Gemini
+itself answered; the deterministic fallback alone cannot meet them.
+
+**Free tier (5 requests/minute per model):** pace the evaluation and run the
+full Agent evaluation only once (≈ 75 requests, ≈ 17–20 min):
+
+```bash
+python scripts/evaluate_agent.py --provider gemini --min-interval 13 --out cp4_gemini_eval.json
+# wait 60 s, then (reuses the report; only the canaries and N10 call Gemini):
+EVAL_LLM_MIN_INTERVAL_SECONDS=13 EVAL_AGENT_REPORT=cp4_gemini_eval.json python -m pytest -m eval -v
+```
+
+The report status is PASS, FAIL, or INCONCLUSIVE (LLM-dependent targets missed
+because of 429 / 503 / timeouts: rerun, it is not an Agent quality result).
 
 The fake providers share the deterministic keyword rules of the fallback, so
 their scores measure the deterministic layer only. Real routing and explanation
@@ -116,3 +132,45 @@ details) and search for it in `logs/agent.jsonl`.
 - `data/validation_results/` — immutable validation run files and a `latest_<period>.json` pointer.
 - `data/vector_index/<provider>/index.json` — the knowledge index for each embeddings provider.
 - `logs/agent.jsonl` — event log (metadata only: no questions, prompts or answers).
+
+
+## Cloud deployment — verified
+
+The PoC was successfully deployed and smoke-tested on Google Cloud Run on October 4, 2026.
+
+- Service: `payroll-agent`
+- Region: `us-central1`
+- Revision: `payroll-agent-00001-5pd`
+- Traffic: `100%`
+- Runtime: Google Cloud Run
+- Secrets: Gemini API key injected at runtime through Google Secret Manager
+- Maximum instances: `1`
+- Application: https://payroll-agent-190772421839.us-central1.run.app
+
+Deployment topology:
+
+`Browser → Streamlit → internal FastAPI/Uvicorn → Agent → Validation Engine / RAG → Auditor`
+
+### Verified end-to-end execution
+
+A controlled production smoke test was executed against the deployed application:
+
+**Question:** `¿Por qué falló EMP024?`
+
+**Final route:** `TOOL_RAG`  
+**Trace ID:** `TRACE-4f596f6a`  
+**HTTP status:** `200`
+
+Cloud Logging confirmed the execution chain:
+
+`request_received → llm_called (intent) → intent_identified → tool_called → engine_result → rag_retrieved → llm_called → auditor_result → route_decided → response_completed`
+
+The deterministic Validation Engine found the employee and returned one failed validation. RAG retrieved supporting documentation, the LLM generated the grounded explanation, and the Auditor executed before the Agent returned the final response.
+
+This smoke test demonstrates the integrated runtime architecture. It does **not** replace the statistical evaluation suite.
+
+### Evaluation note
+
+The real-Gemini stratified evaluation remains **INCONCLUSIVE** because provider/quota errors interrupted the run after 11 of 14 cases. It is intentionally not reported as PASS or as an estimate of full-population Gemini quality.
+
+The deterministic layer, resilience controls, deployment, and successful cloud end-to-end execution are documented separately in `docs/CP4_EVIDENCIA_FINAL.md`.
