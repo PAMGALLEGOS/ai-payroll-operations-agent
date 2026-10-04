@@ -3,10 +3,7 @@
 > **Synthetic data only.** No real employees, payroll data, corporate documents,
 > production systems or credentials are used anywhere in this repository.
 
-**Current status: CP4 — end-to-end demo** (CP1 validation core, CP2 knowledge &
-RAG and CP3 Agent approved). The application runs locally with a FastAPI API, a
-Streamlit interface and JSON-lines observability. Docker / GCP readiness and the
-final README come in CP5.
+**Current status:** Final academic PoC — deterministic Payroll Validation Engine, synthetic Knowledge Base & RAG, Agent orchestration, Auditor guardrails, FastAPI + Streamlit interface, JSON-lines observability, automated QA, Docker packaging, and a verified Google Cloud Run deployment with a successful real-Gemini end-to-end smoke test.
 
 ## Quick start — the demo
 
