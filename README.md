@@ -3,10 +3,22 @@
 > **Synthetic data only.** No real employees, payroll data, corporate documents,
 > production systems or credentials are used anywhere in this repository.
 
-**Current status: CP3 — Agent & Orchestration** (CP1 validation core and CP2
-knowledge & RAG approved). FastAPI, Streamlit, structured file logging and GCP
-deployment come in later checkpoints, only after each checkpoint is approved.
-The full README (architecture, deployment, example questions) is written in Phase 14.
+**Current status: CP4 — end-to-end demo** (CP1 validation core, CP2 knowledge &
+RAG and CP3 Agent approved). The application runs locally with a FastAPI API, a
+Streamlit interface and JSON-lines observability. Docker / GCP readiness and the
+final README come in CP5.
+
+## Quick start — the demo
+
+```bash
+python scripts/run_demo.py --provider fake --prepare     # offline, no credentials
+python scripts/run_demo.py --prepare                     # with Gemini (.env: GEMINI_API_KEY, GEMINI_MODEL)
+```
+
+It prepares the validation run and the knowledge index if missing, starts the
+API on http://127.0.0.1:8000 (contract docs at /docs) and the interface on
+http://localhost:8501. The interface opens in Spanish; switch to English in the
+sidebar. Ctrl+C stops both.
 
 ## Core principle
 
@@ -45,7 +57,10 @@ Every generated answer passes the Auditor (ALLOW / REVISE once / BLOCK).
 | LLM clients | `app/llm/` | `LLMClient` interface: Gemini (structured output) + scriptable fake |
 | Agent | `app/agent/` | Language, entities, intent, routing matrix, session, templates, explainer, orchestrator |
 | Auditor | `app/audit/` | Deterministic checks and ALLOW / REVISE / BLOCK |
-| Scripts | `scripts/` | Batch run, ingestion, search, retrieval and Agent evaluation, console chat |
+| API | `app/api/` | `POST /chat`, `GET /validation`, `POST /documents/ingest`, `GET /health` |
+| Web interface | `app/web/` | Streamlit: Validation Dashboard + Chat (ES / EN), talks to the API only |
+| Observability | `app/observability/` | One JSON line per event with `trace_id`, to stdout and `logs/agent.jsonl` |
+| Scripts | `scripts/` | Batch run, ingestion, search, evaluations, console chat, demo launcher, KPI report |
 
 ## Run locally
 
@@ -85,7 +100,19 @@ The fake providers share the deterministic keyword rules of the fallback, so
 their scores measure the deterministic layer only. Real routing and explanation
 quality are measured with the Gemini steps above.
 
+## Run the pieces separately
+
+```bash
+uvicorn app.api.main:app --port 8000
+streamlit run app/web/streamlit_app.py
+python scripts/metrics_report.py          # KPIs from logs/agent.jsonl
+```
+
+To follow one interaction, copy its `trace_id` from the interface (technical
+details) and search for it in `logs/agent.jsonl`.
+
 ## Outputs (generated locally, not committed)
 
 - `data/validation_results/` — immutable validation run files and a `latest_<period>.json` pointer.
 - `data/vector_index/<provider>/index.json` — the knowledge index for each embeddings provider.
+- `logs/agent.jsonl` — event log (metadata only: no questions, prompts or answers).

@@ -1,11 +1,15 @@
 # AI Payroll Operations & Validation Agent — pinned dependencies (Python 3.11)
 #
-# Dependencies are added in the checkpoint that first uses them.
+# Dependencies are added in the checkpoint that first uses them (all approved in D13 / D4-13).
 
 # --- Runtime ---
 PyYAML==6.0.3              # CP1: rules file, CP2: document front matter
-pydantic-settings==2.15.0  # CP2: settings from environment / .env (approved in D13)
-google-genai==2.28.0       # CP2: Gemini Embeddings (approved in D1/D2)
+pydantic-settings==2.15.0  # CP2: settings from environment / .env
+google-genai==2.28.0       # CP2/CP3: Gemini embeddings and text generation
+fastapi==0.142.2           # CP4: API
+uvicorn==0.54.0            # CP4: API server
+streamlit==1.65.0          # CP4: web interface (brings pandas / numpy as its own dependencies)
+httpx==0.28.1              # CP4: UI -> API client, demo launcher, API tests
 
 # --- Development / testing ---
 pytest==9.1.1

@@ -3,13 +3,14 @@
 CP1: tolerances are read from config/validation_rules.yaml instead of being
 hard-coded, so changing a tolerance keeps the boundary tests meaningful.
 
-CP3: Agent tests run against a validation run and a fake knowledge index built
+CP3/CP4: Agent and API tests run against a validation run and a fake knowledge index built
 in temporary folders, so they never depend on (or modify) local data files,
 the network or credentials.
 """
 
 from __future__ import annotations
 
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -75,3 +76,51 @@ def make_agent(run_dir, fake_index_dir):
         return agent, llm
 
     return _make
+
+
+# ---------------------------------------------------------------- CP4 API
+# The real FastAPI app with an Agent built from fake providers. The index
+# folder is a per-test copy, because POST /documents/ingest rewrites it.
+
+
+@pytest.fixture
+def api_factory(run_dir, fake_index_dir, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app.agent.factory import build_agent
+    from app.agent.fake_handlers import make_fake_llm
+    from app.api.main import create_app
+    from app.core.config import Settings
+    from app.observability.events import RecordingObserver
+
+    def _make(settings=None, knowledge_dir=KNOWLEDGE_DIR, results_dir=None, llm=None):
+        settings = settings or Settings(_env_file=None)
+        index_dir = tmp_path / "index"
+        if not index_dir.exists():
+            shutil.copytree(fake_index_dir, index_dir)
+        observer = RecordingObserver()
+        llm = llm or make_fake_llm()
+        agent = build_agent(settings, llm=llm, embeddings_provider="fake", results_dir=results_dir or run_dir,
+                            index_dir=index_dir, knowledge_dir=knowledge_dir, observer=observer)
+        app = create_app(settings, agent=agent, observer=observer, results_dir=results_dir or run_dir,
+                         index_dir=index_dir, knowledge_dir=knowledge_dir)
+        client = TestClient(app, raise_server_exceptions=False)
+        client.__enter__()
+        client.observer, client.agent, client.llm, client.index_dir = observer, agent, llm, index_dir
+        return client
+
+    clients = []
+
+    def factory(*args, **kwargs):
+        client = _make(*args, **kwargs)
+        clients.append(client)
+        return client
+
+    yield factory
+    for client in clients:
+        client.__exit__(None, None, None)
+
+
+@pytest.fixture
+def api(api_factory):
+    return api_factory()

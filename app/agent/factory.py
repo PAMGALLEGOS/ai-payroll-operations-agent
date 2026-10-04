@@ -16,6 +16,8 @@ from app.core.config import Settings
 from app.core.paths import KNOWLEDGE_DIR, VALIDATION_RESULTS_DIR, VECTOR_INDEX_DIR
 from app.llm.client import LLMClient, LLMConfigError
 from app.llm.gemini_client import GeminiLLMClient
+from app.observability.events import AgentObserver
+from app.observability.llm import ObservedLLMClient
 from app.rag.embeddings import EmbeddingProvider, create_embedding_provider
 from app.rag.ingest import index_path
 from app.rag.retriever import Retriever
@@ -37,6 +39,22 @@ def create_llm_client(settings: Settings, provider: str | None = None) -> LLMCli
     raise LLMConfigError(f"Unknown LLM provider '{name}' (use 'gemini' or 'fake')")
 
 
+def load_knowledge(
+    settings: Settings,
+    embeddings: EmbeddingProvider,
+    index_dir: Path = VECTOR_INDEX_DIR,
+    knowledge_dir: Path = KNOWLEDGE_DIR,
+) -> tuple[Retriever | None, KnowledgeGuard]:
+    """Load the index for this embeddings provider. A missing index yields (None, guard 'missing')."""
+    try:
+        index: VectorIndex | None = VectorIndex.load(index_path(embeddings.name, index_dir))
+        retriever: Retriever | None = Retriever(
+            index, embeddings, top_k=settings.rag_top_k, min_score=settings.rag_min_score)
+    except VectorIndexError:
+        index, retriever = None, None   # the Agent answers documentary questions with "index unavailable"
+    return retriever, KnowledgeGuard(index, knowledge_dir)
+
+
 def build_agent(
     settings: Settings,
     *,
@@ -47,21 +65,19 @@ def build_agent(
     results_dir: Path = VALIDATION_RESULTS_DIR,
     index_dir: Path = VECTOR_INDEX_DIR,
     knowledge_dir: Path = KNOWLEDGE_DIR,
+    observer: AgentObserver | None = None,
 ) -> Agent:
     llm = llm or create_llm_client(settings, llm_provider)
+    if observer is not None:
+        llm = ObservedLLMClient(llm, observer)   # records llm_called events (D4-08)
     embeddings = embeddings or create_embedding_provider(settings, embeddings_provider)
-
-    try:
-        index: VectorIndex | None = VectorIndex.load(index_path(embeddings.name, index_dir))
-        retriever: Retriever | None = Retriever(
-            index, embeddings, top_k=settings.rag_top_k, min_score=settings.rag_min_score)
-    except VectorIndexError:
-        index, retriever = None, None   # the Agent answers documentary questions with "index unavailable"
+    retriever, guard = load_knowledge(settings, embeddings, index_dir, knowledge_dir)
 
     return Agent(
         tool=ValidationTool(results_dir),
         llm=llm,
         retriever=retriever,
-        knowledge_guard=KnowledgeGuard(index, knowledge_dir),
+        knowledge_guard=guard,
         sessions=SessionStore(settings.session_ttl_minutes),
+        observer=observer,
     )

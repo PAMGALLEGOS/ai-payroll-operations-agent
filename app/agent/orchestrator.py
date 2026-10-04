@@ -13,8 +13,8 @@ facts, never towards an invented answer.
 
 from __future__ import annotations
 
+import threading
 import time
-import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
@@ -32,6 +32,8 @@ from app.agent.session import PendingQuestion, SessionState, SessionStore
 from app.audit.auditor import Auditor, AuditReport
 from app.audit.checks import AuditContext
 from app.llm.client import LLMClient, LLMError
+from app.observability.context import current_trace_id, new_trace_id, reset_trace_id, set_trace_id
+from app.observability.events import AgentObserver, NullObserver, message_fingerprint
 from app.rag.retriever import Retriever
 from app.validation.tool import ToolError, ToolResult, ValidationTool
 
@@ -67,6 +69,7 @@ class Agent:
         sessions: SessionStore | None = None,
         auditor: Auditor | None = None,
         clock: Callable[[], float] = time.perf_counter,
+        observer: AgentObserver | None = None,
     ):
         self.tool = tool
         self.llm = llm
@@ -77,29 +80,51 @@ class Agent:
         self.classifier = IntentClassifier(llm)
         self.explainer = Explainer(llm)
         self.clock = clock
+        # Observability hooks (D4-08): they only report, they never change a decision.
+        self.observer: AgentObserver = observer or NullObserver()
+        self._retrieval_lock = threading.Lock()
+
+    def replace_retriever(self, retriever: Retriever | None, guard: KnowledgeGuard) -> None:
+        """Swap the knowledge index after a re-ingestion, without a restart (D4-07)."""
+        with self._retrieval_lock:
+            self.retriever, self.guard = retriever, guard
 
     # ================================================================ entry
     def handle(self, request: AgentRequest) -> AgentResponse:
         started = self.clock()
-        trace_id = f"TRACE-{uuid.uuid4().hex[:8]}"
-        with self.sessions.lock(request.session_id):
-            session = self.sessions.get(request.session_id)
-            message = (request.message or "").strip()[:1000]
-            turn = Turn(
-                trace_id=trace_id,
-                message=message,
-                language=detect_language(message, default=session.language),  # type: ignore[arg-type]
-                entities=extract_entities(message),
-                session=session,
-            )
-            try:
-                response = self._answer(turn)
-            except Exception:  # last line of defence: never leak internals, never invent
-                response = self._response(turn, "CLARIFY", R.t("safe_error", turn.language, trace_id=trace_id),
-                                          "safe_fallback", route_source="error")
-            self._remember(turn, response)
-        response.latency_ms = int((self.clock() - started) * 1000)
-        return response
+        # Reuse the trace_id of the surrounding API request when there is one (CP4), so the
+        # api_request event and the Agent events share one id; otherwise create a new one.
+        trace_id = current_trace_id() or new_trace_id()
+        token = set_trace_id(trace_id)
+        try:
+            with self.sessions.lock(request.session_id):
+                session = self.sessions.get(request.session_id)
+                message = (request.message or "").strip()[:1000]
+                turn = Turn(
+                    trace_id=trace_id,
+                    message=message,
+                    language=detect_language(message, default=session.language),  # type: ignore[arg-type]
+                    entities=extract_entities(message),
+                    session=session,
+                )
+                self.observer.emit("request_received", language=turn.language, message_length=len(message),
+                                   message_hash=message_fingerprint(message))
+                try:
+                    response = self._answer(turn)
+                except Exception as error:  # last line of defence: never leak internals, never invent
+                    self.observer.emit("error", component="agent", error_type=type(error).__name__)
+                    response = self._response(turn, "CLARIFY", R.t("safe_error", turn.language, trace_id=trace_id),
+                                              "safe_fallback", route_source="error")
+                self._remember(turn, response)
+            response.latency_ms = int((self.clock() - started) * 1000)
+            self.observer.emit("route_decided", route=response.route, intent=response.intent,
+                               route_source=response.route_source)
+            self.observer.emit("response_completed", route=response.route, answer_mode=response.answer_mode,
+                               evidence_status=response.evidence_status, verdict=response.audit.get("verdict"),
+                               revised=response.audit.get("revised", False), latency_ms=response.latency_ms)
+            return response
+        finally:
+            reset_trace_id(token)
 
     # ============================================================ decide
     def _answer(self, turn: Turn) -> AgentResponse:
@@ -115,6 +140,7 @@ class Agent:
             turn.intent, turn.retrieval_query, turn.route_source = (
                 decision.intent, decision.retrieval_query, decision.source)
             turn.prompts_used.append(prompts.INTENT)
+            self.observer.emit("intent_identified", intent=decision.intent, source=decision.source)
             if len(turn.entities.employee_ids) > 1:
                 return self._clarify(turn, "multiple_employees", route_source="rule")
 
@@ -221,11 +247,17 @@ class Agent:
         return self._audit_template(response, turn)
 
     def _query_tool(self, turn: Turn, **filters: Any) -> tuple[ToolResult | None, str | None]:
+        self.observer.emit("tool_called", period=turn.period,
+                           filters={k: v for k, v in filters.items() if v is not None})
         try:
-            return self.tool.query(turn.period, **filters), None  # type: ignore[arg-type]
+            result = self.tool.query(turn.period, **filters)  # type: ignore[arg-type]
         except ToolError as error:
             key = "no_run" if "No validation run" in str(error) else "run_untrusted"
+            self.observer.emit("tool_error", error_type=key)
             return None, R.t(key, turn.language, period=turn.period)
+        self.observer.emit("engine_result", found=result.found, results=len(result.results),
+                           fail_count=result.summary["fail_count"], run_id=result.run.get("run_id"))
+        return result, None
 
     def _tool(self, turn: Turn) -> AgentResponse:
         lang = turn.language
@@ -327,15 +359,22 @@ class Agent:
 
     # ============================================================ helpers
     def _retrieve(self, query: str) -> tuple[list[dict[str, Any]], str]:
-        status = self.guard.status()
+        with self._retrieval_lock:          # a consistent (retriever, guard) pair during re-ingestion
+            retriever, guard = self.retriever, self.guard
+        status = guard.status()
         if status == "stale":
-            return [], "blocked_stale_index"
-        if status == "missing" or self.retriever is None:
-            return [], "unavailable"
-        result = self.retriever.search(query)
-        if not result.sufficient_evidence:
-            return [], "insufficient"
-        return [r.to_dict() for r in result.results], "sufficient"
+            evidence, outcome, top = [], "blocked_stale_index", None
+        elif status == "missing" or retriever is None:
+            evidence, outcome, top = [], "unavailable", None
+        else:
+            result = retriever.search(query)
+            top = round(result.top_score, 4)
+            if result.sufficient_evidence:
+                evidence, outcome = [r.to_dict() for r in result.results], "sufficient"
+            else:
+                evidence, outcome = [], "insufficient"
+        self.observer.emit("rag_retrieved", evidence_status=outcome, chunks=len(evidence), top_score=top)
+        return evidence, outcome
 
     def _generate_audited(self, generate: Callable[[list[str] | None], str],
                           ctx: AuditContext) -> tuple[str | None, AuditReport | None, bool]:
@@ -345,6 +384,7 @@ class Agent:
         except LLMError:
             return None, None, False
         report = self.auditor.review(text, ctx)
+        self._emit_audit(report, 1)
         if report.verdict == "ALLOW":
             return text, report, False
         if report.verdict == "BLOCK":
@@ -354,6 +394,7 @@ class Agent:
         except LLMError:
             return None, report, True
         second = self.auditor.review(rewritten, ctx, is_rewrite=True)
+        self._emit_audit(second, 2)
         return (rewritten if second.verdict == "ALLOW" else None), second, True
 
     def _audit_context(self, turn: Turn, route: str, result: ToolResult | None,
@@ -375,7 +416,13 @@ class Agent:
     def _template_audit(self, response: AgentResponse, turn: Turn, result: ToolResult | None) -> dict[str, Any]:
         ctx = self._audit_context(turn, response.route, result, [])
         ctx.chunks = [{"chunk_id": e["chunk_id"], "content": ""} for e in response.evidence]
-        return _audit_dict(self.auditor.review(response.answer, ctx), False)
+        report = self.auditor.review(response.answer, ctx)
+        self._emit_audit(report, "template")
+        return _audit_dict(report, False)
+
+    def _emit_audit(self, report: AuditReport, attempt: int | str) -> None:
+        self.observer.emit("auditor_result", attempt=attempt, verdict=report.verdict,
+                           failed_checks=[c.name for c in report.failed])
 
     def _audit_template(self, response: AgentResponse, turn: Turn,
                         tool_result: ToolResult | None = None) -> AgentResponse:

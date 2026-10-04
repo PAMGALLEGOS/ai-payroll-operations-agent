@@ -94,7 +94,7 @@ def test_factory_rejects_unknown_provider():
 def test_default_settings_use_gemini_as_approved_provider():
     settings = _settings()
     assert settings.embeddings_provider == "gemini"
-    assert settings.gemini_embedding_model == "gemini-embedding-001"
+    assert settings.gemini_embedding_model == "models/gemini-embedding-001"   # D4-02
 
 
 # ---------------------------------------------------------------- gemini

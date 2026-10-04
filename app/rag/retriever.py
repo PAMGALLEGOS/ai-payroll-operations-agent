@@ -26,6 +26,11 @@ from app.rag.vector_index import VectorIndexError, VectorIndex
 DEFAULT_MIN_SCORE = {"fake": 0.13, "gemini": 0.638}
 
 
+def canonical_model_name(model: str) -> str:
+    """'models/gemini-embedding-001' and 'gemini-embedding-001' name the same model (D4-02)."""
+    return model.removeprefix("models/")
+
+
 @dataclass(frozen=True)
 class RetrievedChunk:
     chunk_id: str
@@ -74,9 +79,9 @@ class Retriever:
         min_score: float | None = None,
     ):
         info = index.info
-        if (info.embeddings_provider, info.embeddings_model, info.dimensions) != (
+        if (info.embeddings_provider, canonical_model_name(info.embeddings_model), info.dimensions) != (
             provider.name,
-            provider.model,
+            canonical_model_name(provider.model),
             provider.dimensions,
         ):
             raise VectorIndexError(

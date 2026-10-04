@@ -12,3 +12,7 @@ addopts = "-m 'not eval'"
 markers = [
     "eval: evaluation against real Gemini (requires GEMINI_API_KEY)",
 ]
+filterwarnings = [
+    # Starlette's TestClient announces a future switch of HTTP library; not relevant to the PoC.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
