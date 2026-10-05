@@ -171,3 +171,12 @@ This smoke test demonstrates the integrated runtime architecture. It does **not*
 The real-Gemini stratified evaluation remains **INCONCLUSIVE** because provider/quota errors interrupted the run after 11 of 14 cases. It is intentionally not reported as PASS or as an estimate of full-population Gemini quality.
 
 The deterministic layer, resilience controls, deployment, and successful cloud end-to-end execution are documented separately in `docs/CP4_EVIDENCIA_FINAL.md`.
+
+## 🎥 Video Demonstration
+
+A complete demonstration of the AI Payroll Operations & Validation Agent, including the deployed Google Cloud environment, representative queries, deterministic validation, RAG grounding, observability, QA evidence, limitations, and roadmap.
+
+**Final Project Video:**  
+https://1drv.ms/v/c/6ca015ebc54de91c/IQB-6qT_jRheSrUBA66vevu7AUThqxeGADVQGjRjyt8X9Cc?e=TbmCrP
+
+> Public read-only link. No authentication or password required.
